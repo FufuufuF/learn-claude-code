@@ -37,10 +37,10 @@ MODEL = os.environ["MODEL_ID"]
 
 SYSTEM = f"You are a coding agent at {WORKDIR}. Use tools to solve tasks. Act, don't explain."
 
-
+# 判断工具输入路径是否合法，防止越界访问
 def safe_path(p: str) -> Path:
-    path = (WORKDIR / p).resolve()
-    if not path.is_relative_to(WORKDIR):
+    path = (WORKDIR / p).resolve() # resolve: 计算所有相对路径 + 解析软链接 + 计算为绝对路径
+    if not path.is_relative_to(WORKDIR): # is_relative_to: 判断 path 是否在 WORKDIR 目录下
         raise ValueError(f"Path escapes workspace: {p}")
     return path
 
@@ -135,7 +135,8 @@ if __name__ == "__main__":
     history = []
     while True:
         try:
-            query = input("\033[36ms02 >> \033[0m")
+            print("\033[36ms02 >> \033[0m", end="")
+            query = input()
         except (EOFError, KeyboardInterrupt):
             break
         if query.strip().lower() in ("q", "exit", ""):
