@@ -50,6 +50,7 @@ Prefer tools over prose."""
 
 # -- TodoManager: structured state the LLM writes to --
 class TodoManager:
+    # 手动维护一个TodoManager类, 每次交互时携带上Todo的信息, 让模型可以随时查看和更新自己的Todo列表
     def __init__(self):
         self.items = []
 
@@ -83,6 +84,7 @@ class TodoManager:
             lines.append(f"{marker} #{item['id']}: {item['text']}")
         done = sum(1 for t in self.items if t["status"] == "completed")
         lines.append(f"\n({done}/{len(self.items)} completed)")
+        print(f"Updated TODOs: {len(self.items)} items, {done} completed", flush=True)
         return "\n".join(lines)
 
 
@@ -177,18 +179,20 @@ def agent_loop(messages: list):
         for block in response.content:
             if block.type == "tool_use":
                 handler = TOOL_HANDLERS.get(block.name)
+                if block.name == "todo":
+                    print(f"> {block.name} (updating todos):", flush=True)
                 try:
                     output = handler(**block.input) if handler else f"Unknown tool: {block.name}"
                 except Exception as e:
                     output = f"Error: {e}"
-                print(f"> {block.name}:")
-                print(str(output)[:200])
+                print(f"> {block.name}:", flush=True)
+                print(str(output)[:200], flush=True)
                 results.append({"type": "tool_result", "tool_use_id": block.id, "content": str(output)})
                 if block.name == "todo":
                     used_todo = True
         rounds_since_todo = 0 if used_todo else rounds_since_todo + 1
         if rounds_since_todo >= 3:
-            results.append({"type": "text", "text": "<reminder>Update your todos.</reminder>"})
+            results.append({"type": "text", "text": "<reminder>Update your todos.</reminder>"}) # 超过三轮重新提醒需要更新TODO
         messages.append({"role": "user", "content": results})
 
 
@@ -196,7 +200,8 @@ if __name__ == "__main__":
     history = []
     while True:
         try:
-            query = input("\033[36ms03 >> \033[0m")
+            print("\033[36ms03 >> \033[0m", end="", flush=True)
+            query = input()
         except (EOFError, KeyboardInterrupt):
             break
         if query.strip().lower() in ("q", "exit", ""):
@@ -207,5 +212,5 @@ if __name__ == "__main__":
         if isinstance(response_content, list):
             for block in response_content:
                 if hasattr(block, "text"):
-                    print(block.text)
-        print()
+                    print(block.text, flush=True)
+        print(flush=True)
